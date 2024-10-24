@@ -201,12 +201,17 @@ class GlueMigrationStack(Stack):
                     subnet_id=vpc.private_subnets[0].subnet_id
                 ),
                 connection_properties={
-                    "JDBC_CONNECTION_URL": f"jdbc:postgresql://{db_instance.instance_endpoint.hostname}:{db_instance.instance_endpoint.port}/{db_name}",
+                    "JDBC_CONNECTION_URL": (
+                        f"jdbc:postgresql://{db_instance.instance_endpoint.hostname}:"
+                        f"{db_instance.instance_endpoint.port}/{db_name}"
+                    ),
                     "USERNAME": "postgres",
                     "PASSWORD": db_secret.secret_value_from_json("password").unsafe_unwrap()
                 }
             )
         )
+        # Add dependency to ensure connection is created before the Glue job
+        glue_job.node.add_dependency(glue_connection)
 
         # Create Glue script asset
         glue_script_asset = s3_assets.Asset(

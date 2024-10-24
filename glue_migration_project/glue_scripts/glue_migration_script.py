@@ -1,6 +1,6 @@
 import sys
 import boto3
-from awsglue.transforms import *
+from awsglue.transforms import Join
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
@@ -142,7 +142,6 @@ def main():
     # Initialize Glue context
     sc = SparkContext()
     glueContext = GlueContext(sc)
-    spark = glueContext.spark_session
     job = Job(glueContext)
 
     # Get job parameters
