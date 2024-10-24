@@ -35,7 +35,8 @@ jobs:
                    --exclude=.git,__pycache__,build,dist,.pytest_cache,.venv,cdk.out
           
       - name: Run tests
-        run: pytest
+        run: |
+          PYTHONPATH=$PYTHONPATH:$(pwd) pytest tests/ -v
         
   deploy-dev:
     needs: validate
