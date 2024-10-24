@@ -1,0 +1,22 @@
+job_defaults:
+  python_version: "3"
+  glue_version: "4.0"
+  max_retries: 1
+  timeout_minutes: 2880
+  worker_type: "G.1X"
+  number_of_workers: 2
+  max_concurrent_runs: 3
+
+spark_conf:
+  spark.driver.memory: 5g
+  spark.executor.memory: 4g
+  spark.executor.cores: 2
+  spark.dynamicAllocation.enabled: "true"
+  spark.shuffle.service.enabled: "true"
+  spark.sql.adaptive.enabled: "true"
+
+monitoring:
+  enable_continuous_cloudwatch_log: true
+  enable_job_insights: true
+  enable_metrics: true
+  log_retention_days: 90

@@ -1,0 +1,55 @@
+raw:
+  base: raw/
+  entities:
+    hired_employees:
+      path: raw/hired_employees/
+      partitions:
+        - year
+        - month
+        - day
+    departments:
+      path: raw/departments/
+      partitions:
+        - year
+        - month
+        - day
+    jobs:
+      path: raw/jobs/
+      partitions:
+        - year
+        - month
+        - day
+
+processed:
+  base: processed/
+  entities:
+    hired_employees:
+      path: processed/hired_employees/
+      format: parquet
+    departments:
+      path: processed/departments/
+      format: parquet
+    jobs:
+      path: processed/jobs/
+      format: parquet
+
+scripts:
+  base: scripts/
+  glue:
+    path: scripts/glue/
+    subdirs:
+      - etl_jobs
+      - utils
+      - dependencies
+
+temp:
+  base: temp/
+  entities:
+    hired_employees: temp/hired_employees/
+    departments: temp/departments/
+    jobs: temp/jobs/
+  retention_days: 7
+
+logs:
+  base: logs/
+  retention_days: 30

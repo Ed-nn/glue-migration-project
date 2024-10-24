@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  cdk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - ~/.aws:/root/.aws:ro
+    environment:
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - CDK_DEFAULT_ACCOUNT=${AWS_ACCOUNT_ID}
+      - CDK_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+    working_dir: /app
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: pytest
+    environment:
+      - PYTHONPATH=/app

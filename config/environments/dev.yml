@@ -1,0 +1,21 @@
+environment: dev
+project_name: globant
+application: migration
+
+resource_naming:
+  prefix: ${project_name}-${application}-${environment}
+  separator: "-"
+
+bucket:
+  versioning: true
+  lifecycle_rules:
+    - transition_to_intelligent_tiering_days: 90
+    - expire_temp_files_days: 7
+
+glue:
+  workers: 2
+  timeout_minutes: 60
+  max_retries: 1
+
+monitoring:
+  alerts_email: dev-team@example.com
