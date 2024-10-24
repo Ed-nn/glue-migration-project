@@ -210,8 +210,6 @@ class GlueMigrationStack(Stack):
                 }
             )
         )
-        # Add dependency to ensure connection is created before the Glue job
-        glue_job.node.add_dependency(glue_connection)
 
         # Create Glue script asset
         glue_script_asset = s3_assets.Asset(
@@ -261,6 +259,8 @@ class GlueMigrationStack(Stack):
                 max_concurrent_runs=1
             )
         )
+        # Add dependency to ensure connection is created before the Glue job
+        glue_job.node.add_dependency(glue_connection)
 
         # Add CloudFormation outputs
         CfnOutput(

@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession
 import tempfile
 import os
 import pandas as pd
+from pyspark.sql.functions import lit
 
 @pytest.fixture(scope="session")
 def spark():
