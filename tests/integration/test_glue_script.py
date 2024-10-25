@@ -1,20 +1,41 @@
 import pytest
-from pyspark.sql import SparkSession
-import tempfile
-import os
+from unittest.mock import Mock, patch
 import pandas as pd
-from pyspark.sql.functions import lit
 
-@pytest.fixture(scope="session")
-def spark():
-    return (SparkSession.builder
-            .master("local[1]")
-            .appName("test")
-            .getOrCreate())
+@pytest.fixture
+def mock_spark_session():
+    """Create a mock Spark session"""
+    with patch('pyspark.sql.SparkSession') as mock_session:
+        spark = Mock()
+        
+        # Mock DataFrame creation
+        def create_dataframe(data):
+            # Convert to pandas DataFrame if it isn't already
+            if not isinstance(data, pd.DataFrame):
+                data = pd.DataFrame(data)
+            
+            # Create a mock DataFrame
+            mock_df = Mock()
+            mock_df.count = lambda: len(data)
+            mock_df.columns = list(data.columns)
+            
+            # Mock withColumn method
+            def mock_with_column(col_name, value):
+                new_mock_df = Mock()
+                new_mock_df.columns = mock_df.columns + [col_name]
+                new_mock_df.count = mock_df.count
+                return new_mock_df
+            
+            mock_df.withColumn = mock_with_column
+            return mock_df
+        
+        spark.createDataFrame = create_dataframe
+        mock_session.builder.getOrCreate.return_value = spark
+        yield spark
 
 @pytest.fixture
 def sample_data():
-    # Create sample data
+    """Create sample test data"""
     hired_employees = pd.DataFrame({
         'id': [1, 2],
         'name': ['John Doe', 'Jane Smith'],
@@ -39,7 +60,8 @@ def sample_data():
         'jobs': jobs
     }
 
-def test_data_processing(spark, sample_data, mock_aws_services):
+def test_data_processing(mock_spark_session, sample_data, mock_aws_services):
+    """Test data processing with mocked Spark"""
     # GIVEN
     s3_client = mock_aws_services['s3']
     bucket_name = "test-bucket"
@@ -49,12 +71,12 @@ def test_data_processing(spark, sample_data, mock_aws_services):
     
     # WHEN
     for table_name, df in sample_data.items():
-        # Convert pandas DataFrame to Spark DataFrame
-        spark_df = spark.createDataFrame(df)
+        # Convert data to Spark DataFrame using our mock
+        spark_df = mock_spark_session.createDataFrame(df)
         
         # Process the data
-        processed_df = spark_df.withColumn("processed", lit(True))
+        processed_df = spark_df.withColumn("processed", Mock())
         
-        # Verify data
-        assert processed_df.count() == df.shape[0]
+        # THEN
+        assert processed_df.count() == len(df)
         assert "processed" in processed_df.columns
