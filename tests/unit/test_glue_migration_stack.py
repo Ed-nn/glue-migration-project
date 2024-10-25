@@ -1,4 +1,3 @@
-# tests/unit/test_glue_migration_stack.py
 import aws_cdk as cdk
 import aws_cdk.assertions as assertions
 from glue_migration_project.glue_migration_stack import GlueMigrationStack
