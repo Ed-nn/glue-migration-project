@@ -305,6 +305,43 @@ class GlueMigrationStack(Stack):
                 max_concurrent_runs=1
             )
         )
+
+
+        restore_table_script_asset = s3_assets.Asset(
+            self,
+            "GlueBackupScriptAsset",
+            path=os.path.join(os.path.dirname(__file__), "glue_scripts", "restore_table_script.py")
+        )
+
+        restore_table_script_asset.grant_read(glue_role)
+
+        # Create the restore Glue job
+        restore_job = aws_glue.CfnJob(
+            self,
+            "RestoreTableJob",
+            name="restore_table_job",
+            role=glue_job_role.role_arn,
+            connections=aws_glue.CfnJob.ConnectionsListProperty(
+                connections=[connection_name]
+            ),
+            command=aws_glue.CfnJob.JobCommandProperty(
+                name="glueetl",
+                python_version="3",
+                script_location=f"s3://{script_bucket.bucket_name}/restore_table_script.py"
+            ),
+            default_arguments={
+                "--job-language": "python",
+                "--job-bookmark-option": "job-bookmark-disable",
+                "--enable-continuous-cloudwatch-log": "true",
+                "--enable-continuous-log-filter": "true",
+                "--TempDir": f"s3://{script_bucket.bucket_name}/temporary/",
+                "--connection_name": connection_name
+            },
+            glue_version="3.0",
+            max_capacity=2,
+            timeout=2880  # 48 hours
+        )
+
         # Add CloudFormation outputs
         CfnOutput(
             self, 
