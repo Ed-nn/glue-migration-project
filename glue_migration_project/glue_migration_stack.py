@@ -306,15 +306,6 @@ class GlueMigrationStack(Stack):
             )
         )
 
-
-        restore_table_script_asset = s3_assets.Asset(
-            self,
-            "GlueBackupScriptAsset",
-            path=os.path.join(os.path.dirname(__file__), "glue_scripts", "restore_table_script.py")
-        )
-
-        restore_table_script_asset.grant_read(glue_role)
-
         # Add CloudFormation outputs
         CfnOutput(
             self, 
