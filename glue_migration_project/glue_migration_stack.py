@@ -334,33 +334,19 @@ class GlueMigrationStack(Stack):
                 resources=[f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}"]
             ))
         
-            # Add target to EventBridge rule
-            target = targets.AwsApi(
-                action="startJobRun",
-                service="Glue",
-                parameters={
-                    "JobName": backup_job.name,
-                    "Arguments": {
-                        "--connection_name": connection_name,
-                        "--output_bucket": input_bucket.bucket_name,
-                        "--tables": "hired_employees,departments,jobs",
-                    }
-                }
+            # Create the target for the EventBridge rule
+            glue_job_target = targets.GlueJob(
+                job_name=backup_job.name,
+                arguments=events.RuleTargetInput.from_object({
+                    "--connection_name": connection_name,
+                    "--output_bucket": input_bucket.bucket_name,
+                    "--tables": "hired_employees,departments,jobs",
+                }),
+                role=eventbridge_role
             )
         
-            self._backup_job_schedule.add_target(target)
-        
-            # Grant the EventBridge rule permission to start the Glue job using CfnRule
-            events.CfnRule(self, "EventBridgeGluePermission",
-                name=self._backup_job_schedule.rule_name,
-                schedule_expression=self._backup_job_schedule.schedule_expression,
-                state="ENABLED",
-                targets=[{
-                    "Arn": f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}",
-                    "Id": "GlueJobTarget",
-                    "RoleArn": eventbridge_role.role_arn
-                }]
-            )
+            # Add the target to the rule
+            self._backup_job_schedule.add_target(glue_job_target)
         # Add CloudFormation outputs
         CfnOutput(
             self, 
