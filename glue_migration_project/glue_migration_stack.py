@@ -305,19 +305,6 @@ class GlueMigrationStack(Stack):
                 max_concurrent_runs=1
             )
         )
-
-        # Create EventBridge rule to schedule the backup job
-        schedule = events.Rule(
-            self,
-            "BackupJobSchedule",
-            schedule=events.Schedule.cron(
-                minute="0",
-                hour="0",
-                month="*",
-                week_day="*",
-                year="*"
-            ),
-        )
         
         # Create EventBridge rule to schedule the backup job
         schedule = events.Rule(
