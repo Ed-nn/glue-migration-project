@@ -306,59 +306,61 @@ class GlueMigrationStack(Stack):
             )
         )
         
-        # Create EventBridge rule to schedule the backup job
-        schedule = events.Rule(
-            self,
-            "BackupJobSchedule",
-            schedule=events.Schedule.cron(
-                minute="0",
-                hour="0",
-                month="*",
-                week_day="*",
-                year="*"
-            ),
-        )
+        # Check if the backup job schedule already exists
+        if not hasattr(self, '_backup_job_schedule'):
+            # Create EventBridge rule to schedule the backup job
+            self._backup_job_schedule = events.Rule(
+                self,
+                "BackupJobSchedule",
+                schedule=events.Schedule.cron(
+                    minute="0",
+                    hour="0",
+                    month="*",
+                    week_day="*",
+                    year="*"
+                ),
+            )
         
-        # Create IAM role for EventBridge to start Glue job
-        eventbridge_role = iam.Role(
-            self,
-            "EventBridgeGlueRole",
-            assumed_by=iam.ServicePrincipal("events.amazonaws.com"),
-        )
+            # Create IAM role for EventBridge to start Glue job
+            eventbridge_role = iam.Role(
+                self,
+                "EventBridgeGlueRole",
+                assumed_by=iam.ServicePrincipal("events.amazonaws.com"),
+            )
         
-        # Add permission to start Glue job
-        eventbridge_role.add_to_policy(iam.PolicyStatement(
-            actions=["glue:StartJobRun"],
-            resources=[f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}"]
-        ))
+            # Add permission to start Glue job
+            eventbridge_role.add_to_policy(iam.PolicyStatement(
+                actions=["glue:StartJobRun"],
+                resources=[f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}"]
+            ))
         
-        # Add target to EventBridge rule
-        target = targets.AwsApi(
-            action="startJobRun",
-            service="Glue",
-            parameters={
-                "JobName": backup_job.name,
-                "Arguments": {
-                    "--connection_name": connection_name,
-                    "--output_bucket": input_bucket.bucket_name,
-                    "--tables": "hired_employees,departments,jobs",
+            # Add target to EventBridge rule
+            target = targets.AwsApi(
+                action="startJobRun",
+                service="Glue",
+                parameters={
+                    "JobName": backup_job.name,
+                    "Arguments": {
+                        "--connection_name": connection_name,
+                        "--output_bucket": input_bucket.bucket_name,
+                        "--tables": "hired_employees,departments,jobs",
+                    }
                 }
-            }
-        )
+            )
         
-        schedule.add_target(target)
+            self._backup_job_schedule.add_target(target)
         
-        # Grant the EventBridge rule permission to start the Glue job
-        events.CfnRule(self, "EventBridgeGluePermission",
-            name=schedule.rule_name,
-            event_pattern=schedule.rule_json,
-            state="ENABLED",
-            targets=[{
-                "Arn": f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}",
-                "Id": "GlueJobTarget",
-                "RoleArn": eventbridge_role.role_arn
-            }]
-        )
+            # Grant the EventBridge rule permission to start the Glue job using CfnRule
+            events.CfnRule(self, "EventBridgeGluePermission",
+                name=self._backup_job_schedule.rule_name,
+                schedule_expression=self._backup_job_schedule.schedule_expression,
+                state="ENABLED",
+                targets=[{
+                    "Arn": f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}",
+                    "Id": "GlueJobTarget",
+                    "RoleArn": eventbridge_role.role_arn
+                }]
+            )
         # Add CloudFormation outputs
         CfnOutput(
             self, 
