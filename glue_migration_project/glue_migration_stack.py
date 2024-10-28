@@ -7,6 +7,8 @@ from aws_cdk import (
     aws_rds as rds,
     aws_ec2 as ec2,
     aws_s3_assets as s3_assets,
+    aws_events as events,
+    aws_events_targets as targets,
     CfnOutput,
     RemovalPolicy,
     Duration,
@@ -262,6 +264,70 @@ class GlueMigrationStack(Stack):
         # Add dependency to ensure connection is created before the Glue job
         glue_job.node.add_dependency(glue_connection)
 
+        backup_script_asset = s3_assets.Asset(
+            self,
+            "GlueBackupScriptAsset",
+            path=os.path.join(os.path.dirname(__file__), "glue_scripts", "glue_backup_script.py")
+        )
+
+        backup_script_asset.grant_read(glue_role)
+
+        # Create Glue backup job
+        backup_job = glue.CfnJob(
+            self, 
+            "GlueBackupJob",
+            name=f"{base_name}-backup-job",
+            role=glue_role.role_arn,
+            command=glue.CfnJob.JobCommandProperty(
+                name="glueetl",
+                python_version="3",
+                script_location=backup_script_asset.s3_object_url
+            ),
+            connections=glue.CfnJob.ConnectionsListProperty(
+                connections=[connection_name]
+            ),
+            default_arguments={
+                "--connection_name": connection_name,
+                "--output_bucket": input_bucket.bucket_name,
+                "--tables": "hired_employees,departments,jobs",  # Add all your table names here
+                "--job-language": "python",
+                "--enable-metrics": "true",
+                "--enable-continuous-cloudwatch-log": "true",
+                "--enable-spark-ui": "true",
+                "--TempDir": f"s3://{input_bucket.bucket_name}/temporary",
+                "--region": Stack.of(self).region,
+            },
+            glue_version="4.0",
+            worker_type="G.1X",
+            number_of_workers=2,
+            timeout=2880,
+            execution_property=glue.CfnJob.ExecutionPropertyProperty(
+                max_concurrent_runs=1
+            )
+        )
+
+        # Create EventBridge rule to schedule the backup job
+        schedule = events.Rule(
+            self,
+            "BackupJobSchedule",
+            schedule=events.Schedule.cron(
+                minute="0",
+                hour="0",
+                month="*",
+                week_day="*",
+                year="*"
+            ),
+        )
+
+        schedule.add_target(targets.GlueStartJobRun(
+            job_name=backup_job.name,
+            job_parameters={
+                "--connection_name": connection_name,
+                "--output_bucket": input_bucket.bucket_name,
+                "--tables": "hired_employees,departments,jobs",  # Add all your table names here
+            }
+        ))
+
         # Add CloudFormation outputs
         CfnOutput(
             self, 
@@ -304,7 +370,12 @@ class GlueMigrationStack(Stack):
             value=connection_name,
             description="Glue Connection Name"
         )
-
+        CfnOutput(
+            self, 
+            "GlueBackupJobName",
+            value=backup_job.name,
+            description="Glue Backup Job Name"
+        )
         # Add tags
         Tags.of(self).add('Project', project_name)
         Tags.of(self).add('Application', application)
