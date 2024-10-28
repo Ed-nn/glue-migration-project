@@ -344,10 +344,7 @@ class GlueMigrationStack(Stack):
                     "--tables": "hired_employees,departments,jobs",
                 }
             },
-            policy=iam.PolicyStatement(
-                actions=["glue:StartJobRun"],
-                resources=[f"arn:aws:glue:{self.region}:{self.account}:job/{backup_job.name}"]
-            )
+            role=eventbridge_role
         ))
         # Add CloudFormation outputs
         CfnOutput(
