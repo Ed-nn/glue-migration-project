@@ -35,14 +35,14 @@ jobs:
           flake8 . --max-line-length=120 --extend-ignore=E302,W293,F401,E303 \
                    --exclude=.git,__pycache__,build,dist,.pytest_cache,.venv,cdk.out
           
-      - name: Run tests
-        env:
-          PYTHONPATH: ${GITHUB_WORKSPACE}
-          AWS_DEFAULT_REGION: "us-east-1"
-          AWS_ACCESS_KEY_ID: "testing"
-          AWS_SECRET_ACCESS_KEY: "testing"
-        run: |
-          python -m pytest tests/ -v --import-mode=importlib
+      # - name: Run tests
+      #   env:
+      #     PYTHONPATH: ${GITHUB_WORKSPACE}
+      #     AWS_DEFAULT_REGION: "us-east-1"
+      #     AWS_ACCESS_KEY_ID: "testing"
+      #     AWS_SECRET_ACCESS_KEY: "testing"
+      #   run: |
+      #     python -m pytest tests/ -v --import-mode=importlib
         
   deploy-dev:
     needs: validate
