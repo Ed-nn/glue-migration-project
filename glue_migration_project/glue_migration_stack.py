@@ -333,20 +333,27 @@ class GlueMigrationStack(Stack):
         ))
         
         # Add target to EventBridge rule
-        schedule.add_target(targets.AwsApi(
-            service="Glue",
-            action="startJobRun",
-            parameters={
+        schedule.add_target(targets.LambdaFunction(
+            iam.Function.from_function_arn(
+                self,
+                "GlueStartJobRunFunction",
+                f"arn:aws:lambda:{self.region}:{self.account}:function:AWSGlueStartJobRun"
+            ),
+            event=events.RuleTargetInput.from_object({
                 "JobName": backup_job.name,
                 "Arguments": {
                     "--connection_name": connection_name,
                     "--output_bucket": input_bucket.bucket_name,
                     "--tables": "hired_employees,departments,jobs",
                 }
-            },
-            iam_role=eventbridge_role
+            })
         ))
-
+        
+        # Grant permission to EventBridge to invoke the Lambda function
+        eventbridge_role.add_to_policy(iam.PolicyStatement(
+            actions=["lambda:InvokeFunction"],
+            resources=[f"arn:aws:lambda:{self.region}:{self.account}:function:AWSGlueStartJobRun"]
+        ))
         # Add CloudFormation outputs
         CfnOutput(
             self, 
